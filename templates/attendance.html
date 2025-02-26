@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Attendance Tracking</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3f37c9;
+            --accent-color: #4895ef;
+            --success-color: #4cc9f0;
+            --danger-color: #f72585;
+            --light-color: #f8f9fa;
+            --dark-color: #212529;
+        }
+        
+        body { 
+            background-color: var(--light-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .navbar { 
+            background-color: var(--primary-color) !important;
+            margin-bottom: 30px;
+        }
+        
+        .card { 
+            margin-bottom: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border: none;
+        }
+        
+        .card-header {
+            background-color: var(--primary-color) !important;
+            color: white;
+            border-radius: 10px 10px 0 0 !important;
+            padding: 15px 20px;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--secondary-color);
+            border-color: var(--secondary-color);
+        }
+        
+        .btn-success {
+            background-color: var(--success-color);
+            border-color: var(--success-color);
+        }
+        
+        .btn-danger {
+            background-color: var(--danger-color);
+            border-color: var(--danger-color);
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+        
+        .status-active { background-color: var(--success-color); }
+        .status-inactive { background-color: var(--danger-color); }
+        
+        .sensor-container {
+            text-align: center;
+            padding: 40px 20px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        
+        .sensor-icon {
+            font-size: 5rem;
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.1);
+                opacity: 0.7;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+        
+        .mode-toggle {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        
+        .mode-toggle .btn {
+            padding: 10px 30px;
+            font-size: 1.2rem;
+            border-radius: 30px;
+        }
+        
+        .worker-info {
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .worker-photo {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background-color: #e9ecef;
+            margin: 0 auto 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            color: var(--primary-color);
+        }
+        
+        .recent-records {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        #messageContainer {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+        }
+        
+        .clock {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--dark-color);
+            margin-bottom: 20px;
+            font-family: monospace;
+        }
+        
+        .date {
+            font-size: 1.2rem;
+            color: var(--dark-color);
+            margin-bottom: 30px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-fingerprint me-2"></i>
+                RFID & Fingerprint Attendance System
+            </a>
+            <div class="d-flex">
+                <a href="{{ url_for('dashboard') }}" class="btn btn-outline-light me-2">
+                    <i class="fas fa-tachometer-alt me-1"></i> Dashboard
+                </a>
+                <a href="{{ url_for('registration') }}" class="btn btn-outline-light me-2">
+                    <i class="fas fa-user-plus me-1"></i> Registration
+                </a>
+                <a href="{{ url_for('logout') }}" class="btn btn-outline-light">
+                    <i class="fas fa-sign-out-alt me-1"></i> Logout
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="row mb-4">
+            <div class="col-md-12 text-center">
+                <div class="clock" id="clock">00:00:00</div>
+                <div class="date" id="date">Monday, January 1, 2025</div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="mb-0">
+                            <i class="fas fa-clock me-2"></i>
+                            Attendance System
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex align-items-center justify-content-center mb-3">
+                            <span class="status-indicator {% if attendance_active %}status-active{% else %}status-inactive{% endif %}" id="statusIndicator"></span>
+                            <span id="statusText">Status: {% if attendance_active %}Active{% else %}Inactive{% endif %}</span>
+                        </div>
+                        
+                        <div class="text-center mb-4">
+                            <a href="{{ url_for('toggle_attendance') }}" class="btn {% if attendance_active %}btn-danger{% else %}btn-success{% endif %} btn-lg" id="toggleBtn">
+                                {% if attendance_active %}
+                                    <i class="fas fa-stop-circle me-1"></i> Stop Attendance System
+                                {% else %}
+                                    <i class="fas fa-play-circle me-1"></i> Start Attendance System
+                                {% endif %}
+                            </a>
+                        </div>
+                        
+                        <div class="mode-toggle">
+                            <button class="btn {% if attendance_mode == 'in' %}btn-primary{% else %}btn-outline-primary{% endif %} me-2" id="clockInBtn">
+                                <i class="fas fa-sign-in-alt me-1"></i> Clock In
+                            </button>
+                            <button class="btn {% if attendance_mode == 'out' %}btn-primary{% else %}btn-outline-primary{% endif %}" id="clockOutBtn">
+                                <i class="fas fa-sign-out-alt me-1"></i> Clock Out
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="sensor-container">
+                    <div class="row">
+                        <div class="col-md-6 text-center">
+                            <i class="fas fa-fingerprint sensor-icon"></i>
+                            <h4>Fingerprint Sensor</h4>
+                            <p>Place finger on sensor</p>
+                        </div>
+                        <div class="col-md-6 text-center">
+                            <i class="fas fa-id-card sensor-icon"></i>
+                            <h4>RFID Reader</h4>
+                            <p>Scan RFID card</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="worker-info" id="workerInfo">
+                    <div class="worker-photo">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <h3 id="workerName">Waiting for scan...</h3>
+                    <p id="workerAction" class="text-muted">Please scan your fingerprint or RFID card</p>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Recent Attendance Records</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="recent-records" id="recentRecords">
+                            <table class="table table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Time</th>
+                                        <th>Name</th>
+                                        <th>Type</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recordsTableBody">
+                                    <!-- Records will be populated by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="messageContainer"></div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Initialize data
+        let attendanceActive = {% if attendance_active is defined %}{{ 'true' if attendance_active else 'false' }}{% else %}false{% endif %};
+        let attendanceMode = "{% if attendance_mode is defined %}{{ attendance_mode }}{% else %}clock-in{% endif %}";
+        let lastDetectedWorker = {% if last_detected_worker is defined %}{{ last_detected_worker|tojson if last_detected_worker else 'null' }}{% else %}null{% endif %};
+        let lastAction = "{% if last_action is defined %}{{ last_action }}{% else %}{% endif %}";
+        
+        // Update clock
+        function updateClock() {
+            const now = new Date();
+            
+            // Format time: HH:MM:SS
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            document.getElementById('clock').textContent = `${hours}:${minutes}:${seconds}`;
+            
+            // Format date: Weekday, Month Day, Year
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('date').textContent = now.toLocaleDateString('en-US', options);
+        }
+        
+        // Update UI based on current state
+        function updateUI() {
+            // Update status indicator
+            const statusIndicator = document.getElementById('statusIndicator');
+            const statusText = document.getElementById('statusText');
+            const toggleBtn = document.getElementById('toggleBtn');
+            
+            if (attendanceActive) {
+                statusIndicator.classList.remove('status-inactive');
+                statusIndicator.classList.add('status-active');
+                statusText.textContent = 'Status: Active';
+                toggleBtn.classList.remove('btn-success');
+                toggleBtn.classList.add('btn-danger');
+                toggleBtn.innerHTML = '<i class="fas fa-stop-circle me-1"></i> Stop Attendance System';
+            } else {
+                statusIndicator.classList.remove('status-active');
+                statusIndicator.classList.add('status-inactive');
+                statusText.textContent = 'Status: Inactive';
+                toggleBtn.classList.remove('btn-danger');
+                toggleBtn.classList.add('btn-success');
+                toggleBtn.innerHTML = '<i class="fas fa-play-circle me-1"></i> Start Attendance System';
+            }
+            
+            // Update mode buttons
+            const clockInBtn = document.getElementById('clockInBtn');
+            const clockOutBtn = document.getElementById('clockOutBtn');
+            
+            if (attendanceMode === 'in') {
+                clockInBtn.classList.add('btn-primary');
+                clockInBtn.classList.remove('btn-outline-primary');
+                clockOutBtn.classList.remove('btn-primary');
+                clockOutBtn.classList.add('btn-outline-primary');
+            } else {
+                clockInBtn.classList.remove('btn-primary');
+                clockInBtn.classList.add('btn-outline-primary');
+                clockOutBtn.classList.add('btn-primary');
+                clockOutBtn.classList.remove('btn-outline-primary');
+            }
+            
+            // Update worker info if available
+            if (lastDetectedWorker) {
+                document.getElementById('workerName').textContent = lastDetectedWorker.name || 'Unknown Worker';
+                document.getElementById('workerAction').textContent = lastAction || 'Detected';
+                document.getElementById('workerInfo').style.borderLeft = '5px solid var(--success-color)';
+            } else {
+                document.getElementById('workerName').textContent = 'Waiting for scan...';
+                document.getElementById('workerAction').textContent = 'Please scan your fingerprint or RFID card';
+                document.getElementById('workerInfo').style.borderLeft = 'none';
+            }
+        }
+        
+        // Show message function
+        function showMessage(message, type = 'success') {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `alert alert-${type} alert-dismissible fade show`;
+            messageDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            `;
+            document.getElementById('messageContainer').appendChild(messageDiv);
+            
+            // Auto dismiss after 5 seconds
+            setTimeout(() => {
+                messageDiv.classList.remove('show');
+                setTimeout(() => messageDiv.remove(), 500);
+            }, 5000);
+        }
+        
+        // Fetch recent attendance records
+        async function fetchRecentRecords() {
+            try {
+                const response = await fetch('/api/get_status');
+                const data = await response.json();
+                
+                if (data.success) {
+                    attendanceActive = data.attendance_active;
+                    attendanceMode = data.attendance_mode;
+                    lastDetectedWorker = data.last_detected_worker;
+                    lastAction = data.last_action;
+                    
+                    updateUI();
+                }
+                
+                // Fetch recent attendance records
+                const recordsResponse = await fetch('/dashboard');
+                const recordsHtml = await recordsResponse.text();
+                
+                // Parse HTML to extract attendance records
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(recordsHtml, 'text/html');
+                const recordsTable = doc.querySelector('table:nth-of-type(2)');
+                
+                if (recordsTable) {
+                    const rows = recordsTable.querySelectorAll('tbody tr');
+                    const recordsTableBody = document.getElementById('recordsTableBody');
+                    recordsTableBody.innerHTML = '';
+                    
+                    rows.forEach(row => {
+                        const newRow = document.createElement('tr');
+                        newRow.innerHTML = row.innerHTML;
+                        recordsTableBody.appendChild(newRow);
+                    });
+                }
+            } catch (error) {
+                console.error('Error fetching status:', error);
+            }
+        }
+        
+        // Toggle attendance mode
+        async function toggleAttendanceMode() {
+            try {
+                const response = await fetch('/api/toggle_attendance_mode', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    attendanceMode = data.attendance_mode;
+                    showMessage(`Attendance mode set to: ${attendanceMode === 'in' ? 'Clock In' : 'Clock Out'}`);
+                    updateUI();
+                } else {
+                    showMessage(data.message, 'danger');
+                }
+            } catch (error) {
+                showMessage('Error toggling attendance mode: ' + error.message, 'danger');
+            }
+        }
+        
+        // Event listeners
+        document.getElementById('clockInBtn').addEventListener('click', () => {
+            if (attendanceMode !== 'in') {
+                toggleAttendanceMode();
+            }
+        });
+        
+        document.getElementById('clockOutBtn').addEventListener('click', () => {
+            if (attendanceMode !== 'out') {
+                toggleAttendanceMode();
+            }
+        });
+        
+        // Initialize
+        updateClock();
+        setInterval(updateClock, 1000);
+        updateUI();
+        
+        // Periodically fetch status and recent records
+        fetchRecentRecords();
+        setInterval(fetchRecentRecords, 5000);
+    </script>
+</body>
+</html>

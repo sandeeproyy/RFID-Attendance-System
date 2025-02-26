@@ -1,0 +1,10 @@
+pyfingerprint==1.5
+mfrc522==0.0.7
+firebase-admin==6.2.0
+flask==2.3.3
+RPi.GPIO==0.7.1
+psutil==5.9.5
+Werkzeug==2.3.7
+Jinja2==3.1.2
+itsdangerous==2.1.2
+MarkupSafe==2.1.3

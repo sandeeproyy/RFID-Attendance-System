@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3f37c9;
+            --accent-color: #4895ef;
+            --success-color: #4cc9f0;
+            --danger-color: #f72585;
+            --light-color: #f8f9fa;
+            --dark-color: #212529;
+        }
+        
+        body { 
+            background-color: var(--light-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .navbar { 
+            background-color: var(--primary-color) !important;
+            margin-bottom: 30px;
+        }
+        
+        .card { 
+            margin-bottom: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border: none;
+        }
+        
+        .card-header {
+            background-color: var(--primary-color) !important;
+            color: white;
+            border-radius: 10px 10px 0 0 !important;
+            padding: 15px 20px;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--secondary-color);
+            border-color: var(--secondary-color);
+        }
+        
+        .btn-success {
+            background-color: var(--success-color);
+            border-color: var(--success-color);
+        }
+        
+        .btn-danger {
+            background-color: var(--danger-color);
+            border-color: var(--danger-color);
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+        
+        .status-active { background-color: var(--success-color); }
+        .status-inactive { background-color: var(--danger-color); }
+        
+        .stats-card {
+            text-align: center;
+            padding: 20px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            border-left: 5px solid var(--primary-color);
+        }
+        
+        .stats-icon {
+            font-size: 2.5rem;
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+        
+        .stats-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--dark-color);
+        }
+        
+        .stats-label {
+            font-size: 1rem;
+            color: #6c757d;
+        }
+        
+        .table-container {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-fingerprint me-2"></i>
+                RFID & Fingerprint Attendance System
+            </a>
+            <div class="d-flex">
+                <span class="navbar-text me-3">
+                    <i class="fas fa-battery-half me-1"></i>
+                    Battery: {{ battery_percent }}%
+                </span>
+                <a href="{{ url_for('registration') }}" class="btn btn-outline-light me-2">
+                    <i class="fas fa-user-plus me-1"></i> Registration
+                </a>
+                <a href="{{ url_for('attendance') }}" class="btn btn-outline-light me-2">
+                    <i class="fas fa-clock me-1"></i> Attendance
+                </a>
+                <a href="{{ url_for('logout') }}" class="btn btn-outline-light">
+                    <i class="fas fa-sign-out-alt me-1"></i> Logout
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Stats Overview -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <i class="fas fa-users stats-icon"></i>
+                    <div class="stats-value">{{ workers|length }}</div>
+                    <div class="stats-label">Total Workers</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <i class="fas fa-sign-in-alt stats-icon"></i>
+                    <div class="stats-value">{{ attendance|selectattr('type', 'equalto', 'in')|list|length }}</div>
+                    <div class="stats-label">Clock-ins Today</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <i class="fas fa-sign-out-alt stats-icon"></i>
+                    <div class="stats-value">{{ attendance|selectattr('type', 'equalto', 'out')|list|length }}</div>
+                    <div class="stats-label">Clock-outs Today</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <i class="fas fa-clock stats-icon"></i>
+                    <div class="stats-value">{{ attendance|length }}</div>
+                    <div class="stats-label">Total Records</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Control Panel -->
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-cogs me-2"></i>
+                            System Controls
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>
+                                    <i class="fas fa-user-plus me-1"></i>
+                                    Registration System
+                                </h6>
+                                <div class="d-flex align-items-center mb-3">
+                                    <span class="status-indicator {% if registration_active %}status-active{% else %}status-inactive{% endif %}"></span>
+                                    <span>Status: {% if registration_active %}Active{% else %}Inactive{% endif %}</span>
+                                </div>
+                                <a href="{{ url_for('toggle_registration') }}" class="btn {% if registration_active %}btn-danger{% else %}btn-success{% endif %} w-100">
+                                    {% if registration_active %}
+                                        <i class="fas fa-stop-circle me-1"></i> Stop Registration
+                                    {% else %}
+                                        <i class="fas fa-play-circle me-1"></i> Start Registration
+                                    {% endif %}
+                                </a>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>
+                                    <i class="fas fa-clock me-1"></i>
+                                    Attendance System
+                                </h6>
+                                <div class="d-flex align-items-center mb-3">
+                                    <span class="status-indicator {% if attendance_active %}status-active{% else %}status-inactive{% endif %}"></span>
+                                    <span>Status: {% if attendance_active %}Active{% else %}Inactive{% endif %}</span>
+                                </div>
+                                <a href="{{ url_for('toggle_attendance') }}" class="btn {% if attendance_active %}btn-danger{% else %}btn-success{% endif %} w-100">
+                                    {% if attendance_active %}
+                                        <i class="fas fa-stop-circle me-1"></i> Stop Attendance
+                                    {% else %}
+                                        <i class="fas fa-play-circle me-1"></i> Start Attendance
+                                    {% endif %}
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Panels -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-users me-2"></i>
+                            Registered Workers
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-container">
+                            <table class="table table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>RFID</th>
+                                        <th>Fingerprint ID</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for worker in workers %}
+                                        <tr>
+                                            <td>{{ worker.name }}</td>
+                                            <td>{{ worker.rfid if worker.rfid else 'N/A' }}</td>
+                                            <td>{{ worker.fingerprint_id if worker.fingerprint_id else 'N/A' }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-history me-2"></i>
+                            Recent Attendance
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-container">
+                            <table class="table table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Time</th>
+                                        <th>Worker</th>
+                                        <th>Type</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for record in attendance %}
+                                        <tr>
+                                            <td>{{ record.datetime if record.datetime else record.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+                                            <td>{{ record.worker_name if record.worker_name else record.worker_id }}</td>
+                                            <td>
+                                                {% if record.type == 'in' %}
+                                                    <span class="badge bg-success">Clock In</span>
+                                                {% else %}
+                                                    <span class="badge bg-danger">Clock Out</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

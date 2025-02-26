@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Worker Registration</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3f37c9;
+            --accent-color: #4895ef;
+            --success-color: #4cc9f0;
+            --danger-color: #f72585;
+            --light-color: #f8f9fa;
+            --dark-color: #212529;
+        }
+        
+        body { 
+            background-color: var(--light-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .navbar { 
+            background-color: var(--primary-color) !important;
+            margin-bottom: 30px;
+        }
+        
+        .card { 
+            margin-bottom: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border: none;
+        }
+        
+        .card-header {
+            background-color: var(--primary-color) !important;
+            color: white;
+            border-radius: 10px 10px 0 0 !important;
+            padding: 15px 20px;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--secondary-color);
+            border-color: var(--secondary-color);
+        }
+        
+        .btn-success {
+            background-color: var(--success-color);
+            border-color: var(--success-color);
+        }
+        
+        .btn-danger {
+            background-color: var(--danger-color);
+            border-color: var(--danger-color);
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+        
+        .status-active { background-color: var(--success-color); }
+        .status-inactive { background-color: var(--danger-color); }
+        
+        .registration-step {
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            background-color: white;
+            border-left: 5px solid var(--primary-color);
+        }
+        
+        .step-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            color: white;
+            margin-right: 10px;
+            font-weight: bold;
+        }
+        
+        .step-complete {
+            border-left-color: var(--success-color);
+        }
+        
+        .step-complete .step-number {
+            background-color: var(--success-color);
+        }
+        
+        .sensor-icon {
+            font-size: 3rem;
+            color: var(--primary-color);
+            margin-bottom: 15px;
+        }
+        
+        #messageContainer {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-fingerprint me-2"></i>
+                RFID & Fingerprint Attendance System
+            </a>
+            <div class="d-flex">
+                <a href="{{ url_for('dashboard') }}" class="btn btn-outline-light me-2">
+                    <i class="fas fa-tachometer-alt me-1"></i> Dashboard
+                </a>
+                <a href="{{ url_for('attendance') }}" class="btn btn-outline-light me-2">
+                    <i class="fas fa-clock me-1"></i> Attendance
+                </a>
+                <a href="{{ url_for('logout') }}" class="btn btn-outline-light">
+                    <i class="fas fa-sign-out-alt me-1"></i> Logout
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="row">
+            <div class="col-md-8 mx-auto">
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="mb-0">
+                            <i class="fas fa-user-plus me-2"></i>
+                            Worker Registration
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="registration-step" id="step1" data-step="1">
+                            <div class="d-flex align-items-center mb-3">
+                                <span class="step-number">1</span>
+                                <h5 class="mb-0">Enter Worker Name</h5>
+                            </div>
+                            <div class="input-group mb-3">
+                                <span class="input-group-text">
+                                    <i class="fas fa-user"></i>
+                                </span>
+                                <input type="text" class="form-control" id="workerName" placeholder="Enter worker name" required>
+                                <button class="btn btn-primary" id="setNameBtn">Set Name</button>
+                            </div>
+                            <div id="nameStatus" class="text-muted small">
+                                Current name: <span id="currentName">None</span>
+                            </div>
+                        </div>
+                        
+                        <div class="registration-step" id="step2" data-step="2">
+                            <div class="d-flex align-items-center mb-3">
+                                <span class="step-number">2</span>
+                                <h5 class="mb-0">Register Fingerprint</h5>
+                            </div>
+                            <div class="text-center mb-3">
+                                <i class="fas fa-fingerprint sensor-icon"></i>
+                                <p>Place the worker's finger on the fingerprint sensor</p>
+                                <button class="btn btn-primary" id="registerFingerprintBtn">
+                                    <i class="fas fa-fingerprint me-1"></i>
+                                    Register Fingerprint
+                                </button>
+                            </div>
+                            <div id="fingerprintStatus" class="text-muted small">
+                                Fingerprint ID: <span id="currentFingerprint">None</span>
+                            </div>
+                        </div>
+                        
+                        <div class="registration-step" id="step3" data-step="3">
+                            <div class="d-flex align-items-center mb-3">
+                                <span class="step-number">3</span>
+                                <h5 class="mb-0">Register RFID Card</h5>
+                            </div>
+                            <div class="text-center mb-3">
+                                <i class="fas fa-id-card sensor-icon"></i>
+                                <p>Place the RFID card near the reader</p>
+                                <button class="btn btn-primary" id="registerRfidBtn">
+                                    <i class="fas fa-id-card me-1"></i>
+                                    Register RFID Card
+                                </button>
+                            </div>
+                            <div id="rfidStatus" class="text-muted small">
+                                RFID ID: <span id="currentRfid">None</span>
+                            </div>
+                        </div>
+                        
+                        <div class="registration-step" id="step4" data-step="4">
+                            <div class="d-flex align-items-center mb-3">
+                                <span class="step-number">4</span>
+                                <h5 class="mb-0">Complete Registration</h5>
+                            </div>
+                            <div class="text-center mb-3">
+                                <i class="fas fa-check-circle sensor-icon"></i>
+                                <p>Review the information and complete the registration</p>
+                                <button class="btn btn-success" id="completeRegistrationBtn">
+                                    <i class="fas fa-save me-1"></i>
+                                    Complete Registration
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="messageContainer"></div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Initialize registration data from server
+        const currentRegistration = {
+            name: "{{ current_registration.name if current_registration.name else 'None' }}",
+            fingerprint: "{{ current_registration.fingerprint if current_registration.fingerprint else 'None' }}",
+            rfid: "{{ current_registration.rfid if current_registration.rfid else 'None' }}"
+        };
+        
+        // Update UI based on current registration data
+        function updateUI() {
+            document.getElementById('currentName').textContent = currentRegistration.name || 'None';
+            document.getElementById('currentFingerprint').textContent = currentRegistration.fingerprint || 'None';
+            document.getElementById('currentRfid').textContent = currentRegistration.rfid || 'None';
+            
+            // Mark steps as complete based on data
+            if (currentRegistration.name && currentRegistration.name !== 'None') {
+                document.getElementById('step1').classList.add('step-complete');
+            } else {
+                document.getElementById('step1').classList.remove('step-complete');
+            }
+            
+            if (currentRegistration.fingerprint && currentRegistration.fingerprint !== 'None') {
+                document.getElementById('step2').classList.add('step-complete');
+            } else {
+                document.getElementById('step2').classList.remove('step-complete');
+            }
+            
+            if (currentRegistration.rfid && currentRegistration.rfid !== 'None') {
+                document.getElementById('step3').classList.add('step-complete');
+            } else {
+                document.getElementById('step3').classList.remove('step-complete');
+            }
+            
+            // Enable/disable complete button based on having at least name and one ID method
+            const completeBtn = document.getElementById('completeRegistrationBtn');
+            if (currentRegistration.name && currentRegistration.name !== 'None' && 
+                (currentRegistration.fingerprint && currentRegistration.fingerprint !== 'None' || 
+                 currentRegistration.rfid && currentRegistration.rfid !== 'None')) {
+                completeBtn.disabled = false;
+            } else {
+                completeBtn.disabled = true;
+            }
+        }
+        
+        // Show message function
+        function showMessage(message, type = 'success') {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `alert alert-${type} alert-dismissible fade show`;
+            messageDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            `;
+            document.getElementById('messageContainer').appendChild(messageDiv);
+            
+            // Auto dismiss after 5 seconds
+            setTimeout(() => {
+                messageDiv.classList.remove('show');
+                setTimeout(() => messageDiv.remove(), 500);
+            }, 5000);
+        }
+        
+        // Set worker name
+        document.getElementById('setNameBtn').addEventListener('click', async () => {
+            const nameInput = document.getElementById('workerName');
+            const name = nameInput.value.trim();
+            
+            if (!name) {
+                showMessage('Please enter a worker name', 'danger');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/set_worker_name', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ name }),
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showMessage(data.message);
+                    currentRegistration.name = name;
+                    updateUI();
+                    nameInput.value = '';
+                } else {
+                    showMessage(data.message, 'danger');
+                }
+            } catch (error) {
+                showMessage('Error setting worker name: ' + error.message, 'danger');
+            }
+        });
+        
+        // Register fingerprint
+        document.getElementById('registerFingerprintBtn').addEventListener('click', async () => {
+            if (!currentRegistration.name || currentRegistration.name === 'None') {
+                showMessage('Please set worker name first', 'warning');
+                return;
+            }
+            
+            const button = document.getElementById('registerFingerprintBtn');
+            button.disabled = true;
+            button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
+            
+            try {
+                showMessage('Place finger on the sensor...', 'info');
+                
+                const response = await fetch('/api/register_fingerprint', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showMessage(data.message);
+                    currentRegistration.fingerprint = data.current_registration.fingerprint;
+                    updateUI();
+                } else {
+                    showMessage(data.message, 'danger');
+                }
+            } catch (error) {
+                showMessage('Error registering fingerprint: ' + error.message, 'danger');
+            } finally {
+                button.disabled = false;
+                button.innerHTML = '<i class="fas fa-fingerprint me-1"></i> Register Fingerprint';
+            }
+        });
+        
+        // Register RFID
+        document.getElementById('registerRfidBtn').addEventListener('click', async () => {
+            if (!currentRegistration.name || currentRegistration.name === 'None') {
+                showMessage('Please set worker name first', 'warning');
+                return;
+            }
+            
+            const button = document.getElementById('registerRfidBtn');
+            button.disabled = true;
+            button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
+            
+            try {
+                showMessage('Place RFID card near the reader...', 'info');
+                
+                const response = await fetch('/api/register_rfid', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showMessage(data.message);
+                    currentRegistration.rfid = data.current_registration.rfid;
+                    updateUI();
+                } else {
+                    showMessage(data.message, 'danger');
+                }
+            } catch (error) {
+                showMessage('Error registering RFID: ' + error.message, 'danger');
+            } finally {
+                button.disabled = false;
+                button.innerHTML = '<i class="fas fa-id-card me-1"></i> Register RFID Card';
+            }
+        });
+        
+        // Complete registration
+        document.getElementById('completeRegistrationBtn').addEventListener('click', async () => {
+            const button = document.getElementById('completeRegistrationBtn');
+            button.disabled = true;
+            button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
+            
+            try {
+                const response = await fetch('/api/complete_registration', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showMessage(data.message);
+                    // Reset all fields
+                    currentRegistration.name = null;
+                    currentRegistration.fingerprint = null;
+                    currentRegistration.rfid = null;
+                    updateUI();
+                    
+                    // Reset steps
+                    document.querySelectorAll('.registration-step').forEach(step => {
+                        step.classList.remove('step-complete');
+                    });
+                } else {
+                    showMessage(data.message, 'danger');
+                }
+            } catch (error) {
+                showMessage('Error completing registration: ' + error.message, 'danger');
+            } finally {
+                button.disabled = false;
+                button.innerHTML = '<i class="fas fa-save me-1"></i> Complete Registration';
+            }
+        });
+        
+        // Initialize UI
+        updateUI();
+    </script>
+</body>
+</html>
